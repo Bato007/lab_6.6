@@ -1,0 +1,352 @@
+<html>
+
+<head>
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    import PropTypes from 'prop-types'
+
+    const htmlRoot = document.getElementById('root')
+    // Boton para cambiar dificultad
+    const DificultyButton = ({ onClick, children }) => {
+      // Para cambiar de pantalla
+      const handleClick = () => {
+        onClick(children)
+      }
+
+      // La estructura del boton
+      return (
+        <button
+          className="difficultyButton"
+          onClick={handleClick}
+          type="button"
+        >
+          {children}
+        </button>
+      )
+    }
+
+    DificultyButton.propTypes = {
+      onClick: PropTypes.func.isRequired,
+      children: PropTypes.string.isRequired,
+    }
+
+    // Boton para cambiar de pantalla
+    const ChangeButton = ({ onClick, screenRefer, children }) => {
+      // Para cambiar de pantalla
+      const handleClick = () => {
+        onClick(screenRefer)
+      }
+
+      // La estructura del boton
+      return (
+        <button
+          className="changeButton"
+          onClick={handleClick}
+          type="submit"
+        >
+          {children}
+        </button>
+      )
+    }
+
+    ChangeButton.propTypes = {
+      onClick: PropTypes.func.isRequired,
+      screenRefer: PropTypes.number.isRequired,
+      children: PropTypes.string.isRequired,
+    }
+
+    // ----------------------------------MAZE COMPONENTS----------------------------------
+    const Player = ({ sense }) => {
+      const splash = () => {
+        switch (sense) {
+          case 'Up':
+            return ('./pfu.jpg')
+          case 'Left':
+            return ('./pfl.jpg')
+          case 'Right':
+            return ('./pfr.jpg')
+          default:
+            return ('./pfd.jpg')
+        }
+      }
+
+      return (
+        <div>
+          <img src={splash()} className="image" alt="" />
+        </div>
+      )
+    }
+
+    Player.propTypes = {
+      sense: PropTypes.string.isRequired,
+    }
+
+    const Reached = () => (
+      <div>
+        <img src="./yeah.jpg" className="image" alt="" />
+      </div>
+    )
+
+    const Goal = () => (
+      <div>
+        <img src="./goal.jpg" className="image" alt="" />
+      </div>
+    )
+
+    const Path = () => (
+      <div>
+        <img src="./path.png" className="image" alt="" />
+      </div>
+    )
+
+    const Lava = () => (
+      <div>
+        <img src="./lava..gif" className="image" alt="" />
+      </div>
+    )
+
+    // ----------------------------------VIEWS----------------------------------
+    const StartScreen = ({ difficulty, changeScreen, changeDifficulty }) => (
+      <div id="start">
+        <div className="container">
+          <h1 className="title">
+            MAZIT
+          </h1>
+          <h2>
+            {difficulty}
+          </h2>
+          <ChangeButton
+            onClick={changeScreen}
+            screenRefer={1}
+          >
+            Play
+          </ChangeButton>
+          <div>
+            <DificultyButton
+              onClick={changeDifficulty}
+            >
+              Facil
+            </DificultyButton>
+            <DificultyButton
+              onClick={changeDifficulty}
+            >
+              Normal
+            </DificultyButton>
+            <DificultyButton
+              onClick={changeDifficulty}
+            >
+              Dificil
+            </DificultyButton>
+          </div>
+        </div>
+      </div>
+    )
+
+    StartScreen.propTypes = {
+      difficulty: PropTypes.string.isRequired,
+      changeScreen: PropTypes.func.isRequired,
+      changeDifficulty: PropTypes.func.isRequired,
+    }
+
+    const Maze = ({ difficulty, moveCount, changeScreen }) => {
+      const [maze, setMaze] = React.useState([])
+      const [sense, setSense] = React.useState('Down')
+      const [position, setPosition] = React.useState([1, 1])
+
+      // Cuando llegue la dificultad
+      React.useEffect(() => {
+        let mazeWidth = 20
+        let mazeLength = 20
+
+        // Dandole el tamaño apropiado si el usuario cambia dificultad
+        if (difficulty === 'Dificil') {
+          mazeWidth = 30
+          mazeLength = 30
+        } else if (difficulty === 'Facil') {
+          mazeWidth = 10
+          mazeLength = 10
+        }
+
+        const url = `http://ubeje.xyz:3001/?type=json&w=${mazeWidth}&h=${mazeLength}`
+        fetch(url)
+          .then((r) => r.json())
+          .then((r) => setMaze(r))
+      }, [])
+
+      // Realiza el cambio
+      const makeMove = (newPosition) => {
+        const move = maze[newPosition[1]][newPosition[0]]
+        const mazeCopy = maze
+
+        // Verificando
+        if (move === ' ' || move === 'g') {
+          if (mazeCopy[position[1]][position[0]] !== 'gp') {
+            mazeCopy[position[1]][position[0]] = ' '
+            mazeCopy[newPosition[1]][newPosition[0]] = 'p'
+            if (move === 'g') {
+              mazeCopy[newPosition[1]][newPosition[0]] = 'gp'
+              setTimeout(changeScreen(2), 5000)
+            }
+            setPosition(newPosition)
+            moveCount()
+          }
+        }
+
+        return mazeCopy
+      }
+
+      Maze.propTypes = {
+        difficulty: PropTypes.string.isRequired,
+        moveCount: PropTypes.number.isRequired,
+        changeScreen: PropTypes.func.isRequired,
+      }
+
+      // Handle when player moves
+      const handleMove = (event) => {
+        const { key } = event
+        let newPosition = [0, 0]
+        const allowed = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+          'w', 'a', 's', 'd']
+
+        // Verificando como se movio
+        if (key === 'ArrowUp' || key === 'w') {
+          newPosition = [(position[0]), (position[1] - 1)]
+          setSense('Up')
+        } else if (key === 'ArrowDown' || key === 's') {
+          newPosition = [(position[0]), (position[1] + 1)]
+          setSense('Down')
+        } else if (key === 'ArrowLeft' || key === 'a') {
+          newPosition = [(position[0] - 1), (position[1])]
+          setSense('Left')
+        } else if (key === 'ArrowRight' || key === 'd') {
+          newPosition = [(position[0] + 1), (position[1])]
+          setSense('Right')
+        }
+
+        // Ahora realiza el movimiento
+        if (key === allowed.find((element) => element === key)) {
+          const mazeCopy = makeMove(newPosition)
+          setMaze(mazeCopy)
+        }
+      }
+
+      return (
+        <div tabIndex="0" onKeyDown={handleMove} role="menu">
+          {maze.map((row) => (
+            <div className="rowstyle">
+              {row.map((cell) => {
+                switch (cell) {
+                  case 'p':
+                    return (
+                      <Player
+                        sense={sense}
+                      />
+                    )
+                  case 'g':
+                    return <Goal />
+                  case ' ':
+                    return <Path />
+                  case 'gp':
+                    return <Reached />
+                  default:
+                    return <Lava />
+                }
+              })}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    const FinishScreen = ({ moves }) => (
+      <div id="start">
+        <div className="container">
+          <h1 className="title">
+            Cantidad de movimientos:
+            {' '}
+            {moves}
+          </h1>
+          <h2>
+            FELICIDADES POR GANAR
+          </h2>
+        </div>
+      </div>
+    )
+
+    FinishScreen.propTypes = {
+      moves: PropTypes.string.isRequired,
+    }
+
+    // Pantalla principal del app
+    const App = () => {
+      const [screen, setScreen] = React.useState(0)
+      const [difficulty, setDifficulty] = React.useState('Facil')
+      const [moves, setMoves] = React.useState(0)
+
+      // Cambiar la pantalla
+      const changeScreen = (newScreen) => {
+        setScreen(newScreen)
+      }
+
+      // Cambiar la dificultad
+      const changeDifficulty = (newDifficulty) => {
+        setDifficulty(newDifficulty)
+      }
+
+      const addMove = () => {
+        setMoves((prevMove) => prevMove + 1)
+      }
+
+      const selectScreen = () => {
+        switch (screen) {
+          case 1:
+            return (
+              <Maze
+                difficulty={difficulty}
+                moveCount={addMove}
+                changeScreen={changeScreen}
+              />
+            )
+          case 2:
+            return (
+              <FinishScreen
+                moves={moves}
+              />
+            )
+          default:
+            return (
+              <StartScreen
+                difficulty={difficulty}
+                changeScreen={changeScreen}
+                changeDifficulty={changeDifficulty}
+              />
+            )
+        }
+      }
+
+      return (
+        <div>
+          <video autoPlay loop muted className="background">
+            <source src="./lavaFlow.mp4" type="video/mp4" />
+          </video>
+          {selectScreen()}
+        </div>
+      )
+    }
+
+    ReactDOM.render(
+      <App />,
+      htmlRoot,
+    )
+  </script>
+</body>
+
+</html>
